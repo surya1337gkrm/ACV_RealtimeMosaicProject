@@ -12,6 +12,7 @@ Mat frame;
 Point p;
 Rect rect;
 vector<Rect> rectArray;
+Point p1, p2;
 
 bool drawing = false;
 int blur_degree = 5;
@@ -27,7 +28,7 @@ void mosaicFilter(Mat frame) {
 
         int b = 0; int g = 0; int r = 0;
         int totalPixels = blur_degree * blur_degree;
-       
+
         int totalrows = (p2.x - p0.x) / blur_degree;
         int totalcols = (p2.y - p0.y) / blur_degree;
 
@@ -36,9 +37,9 @@ void mosaicFilter(Mat frame) {
                 int x1 = p0.x + m * blur_degree;
                 int y1 = p0.y + n * blur_degree;
 
-                for (int y = y1; y < y1 + blur_degree; y++)
+                for (int y = y1; y < y1 + blur_degree && y <= p2.y; y++)
                 {
-                    for (int x = x1; x < x1 + blur_degree; x++) {
+                    for (int x = x1; x < x1 + blur_degree && x <= p2.x; x++) {
                         r += frame.ptr<uchar>(y)[3 * x + 0];
                         g += frame.ptr<uchar>(y)[3 * x + 1];
                         b += frame.ptr<uchar>(y)[3 * x + 2];
@@ -53,7 +54,7 @@ void mosaicFilter(Mat frame) {
 
                 for (int y = y1; y < y1 + (blur_degree) && y <= p2.y; y++)
                 {
-                    for (int x = x1; x < x1 + (blur_degree) && x <= p2.y; x++) {
+                    for (int x = x1; x < x1 + (blur_degree) && x <= p2.x; x++) {
                         frame.ptr<uchar>(y)[3 * x + 0] = rAvg;
                         frame.ptr<uchar>(y)[3 * x + 1] = gAvg;
                         frame.ptr<uchar>(y)[3 * x + 2] = bAvg;
@@ -67,36 +68,25 @@ void mosaicFilter(Mat frame) {
 void onMouseDrag(int event, int x, int y, int flags, void* userdata) {
     if (event == EVENT_LBUTTONDOWN) {
         drawing = true;
-        p.x = x;
-        p.y = y;
-        rect.x = x;
-        rect.y = y;
-
-        rect.height = 0;
-        rect.width = 0;
+        p1.x = x;
+        p1.y = y;
     }
-    else if (event == EVENT_MOUSEMOVE && EVENT_FLAG_LBUTTON) { 
+    else if (event == EVENT_MOUSEMOVE && EVENT_FLAG_LBUTTON) {
         if (drawing) {
-            if (x < p.x) 
-            {
-                rect.x = x;
-                rect.width = abs(x - p.x);
-            }
-            else {
-                rect.width = abs(p.x - x);
-            }
-            if (y < p.y) {
-                rect.y = y;
-                rect.height = abs(y - p.y);
-            }
-            else {
-                rect.height = abs(p.y - y);
-            }
+            p2.x = x;
+            p2.y = y;
+            rectangle(frame, p1, p2, Scalar(0, 0, 255), 1, 8, 0);
+            imshow("frame", frame);
         }
     }
     else if (event == EVENT_LBUTTONUP) {
         drawing = false;
-        rectArray.push_back(rect);
+        p2.x = x;
+        p2.y = y;
+        int height = p2.y - p1.y;
+        int width = p2.x - p1.x;
+        
+        rectArray.push_back(Rect(p1,p2));
     }
 }
 
@@ -116,7 +106,7 @@ int main(int argc, char** argv)
         for (int i = 0; i < rectArray.size(); i++)
         {
             Rect r = rectArray[i];
-            rectangle(frame, r, Scalar(0, 0, 255), 1, 8);           
+            rectangle(frame, r, Scalar(0, 0, 255), 1, 8);
         }
         mosaicFilter(frame);
 
@@ -125,7 +115,6 @@ int main(int argc, char** argv)
         uchar c = waitKey(1);
 
         if (c == 'i' || c == 'I') {
-            printf("%d",blur_degree);
             if (blur_degree < 5) {
                 blur_degree++;
             }
@@ -134,20 +123,18 @@ int main(int argc, char** argv)
         }
         else if (c == 'd' || c == 'D') {
 
-            if (blur_degree > 1 && blur_degree<=5) {
+            if (blur_degree > 1 && blur_degree <= 5) {
                 blur_degree--;
             }
-            else if (blur_degree >5) blur_degree = blur_degree - 5;
+            else if (blur_degree > 5) blur_degree = blur_degree - 5;
         }
-        else if (c == 's' || c == 'S') {       
-            imwrite("C:\\Users\\surya\\Downloads\\result.jpg", frame);
+        else if (c == 's' || c == 'S') {
+            imwrite("result.jpg", frame);
         }
         else if (c == 'r' || c == 'R') {
-            for (int i = 0; i < rectArray.size(); i++) {
-                rectArray[i] = Rect(0, 0, 0, 0);
-            }
+            rectArray.clear();
         }
         if (c == 27) break;
     }
     return 1;
-}
+};
